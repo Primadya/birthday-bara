@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Petualangan Luar Angkasa Sabara!</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;600;700&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- GSAP for Animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollToPlugin.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+    <style>
+        /* --- Setup Dasar --- */
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #0f172a;
+            color: white;
+            overflow-x: hidden;
+        }
+        
+        h1, h2, h3, .fun-font {
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        /* Hide Scrollbar for Gallery Mobile but keep functionality */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* --- Background Stars --- */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+            overflow: hidden;
+        }
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.8;
+            animation: twinkle var(--duration) ease-in-out infinite;
+        }
+        @keyframes twinkle {
+            0% { opacity: 0.2; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0.2; transform: scale(0.8); }
+        }
+
+        /* --- Earth Background --- */
+        .earth-bg {
+            background: linear-gradient(180deg, #38bdf8 0%, #7dd3fc 40%, #bae6fd 70%, #e0f2fe 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .earth-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 20%, rgba(255,255,255,0.4) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        /* --- Transitions & Animations --- */
+        #massive-fire {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at bottom center, #fff 0%, #fef08a 10%, #fdba74 30%, #ea580c 60%, transparent 80%);
+            z-index: 9999;
+            transform: scaleY(0);
+            transform-origin: bottom;
+            pointer-events: none;
+            opacity: 0.9;
+            display: none; 
+        }
+
+        .parallax > use {
+            animation: move-forever 25s cubic-bezier(.55,.5,.45,.5) infinite;
+        }
+        .parallax > use:nth-child(1) { animation-delay: -2s; animation-duration: 7s; }
+        .parallax > use:nth-child(2) { animation-delay: -3s; animation-duration: 10s; }
+        .parallax > use:nth-child(3) { animation-delay: -4s; animation-duration: 13s; }
+        .parallax > use:nth-child(4) { animation-delay: -5s; animation-duration: 20s; }
+        
+        @keyframes move-forever {
+            0% { transform: translate3d(-90px,0,0); }
+            100% { transform: translate3d(85px,0,0); }
+        }
+
+        .float-slow { animation: float 8s ease-in-out infinite; }
+        .float-medium { animation: float 6s ease-in-out infinite; }
+        .wiggle { animation: wiggle 3s ease-in-out infinite; }
+        .spin-slow { animation: spin 25s linear infinite; }
+        .cloud-drift { animation: cloudDrift 120s linear infinite; }
+        .cloud-drift-reverse { animation: cloudDriftReverse 150s linear infinite; }
+        
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(2deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(-3deg); }
+            50% { transform: rotate(3deg); }
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes cloudDrift {
+            0% { transform: translateX(-5%); }
+            50% { transform: translateX(5%); }
+            100% { transform: translateX(-5%); }
+        }
+        @keyframes cloudDriftReverse {
+            0% { transform: translateX(5%); }
+            50% { transform: translateX(-5%); }
+            100% { transform: translateX(5%); }
+        }
+
+        /* --- Custom Styles --- */
+        .hud-frame {
+            position: relative;
+            padding: 4px;
+            background: linear-gradient(45deg, #fbbf24, #f59e0b, #fbbf24); 
+            border-radius: 1rem;
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
+        }
+        .hud-image {
+            display: block;
+            width: 100%;
+            border-radius: 0.8rem;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        .fg-decor {
+            position: absolute;
+            z-index: 50; 
+            pointer-events: none; 
+            filter: drop-shadow(0 0 5px rgba(0,0,0,0.2));
+        }
+        .card-3d {
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out;
+            z-index: 20;
+        }
+        .card-content { transform: translateZ(50px); }
+        .crater {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.3); 
+            box-shadow: inset 3px 3px 5px rgba(0,0,0,0.5), 1px 1px 0 rgba(255,255,255,0.1);
+        }
+        
+        /* Wishes Wall */
+        .wish-bubble {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 1rem 1rem 1rem 0;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            color: #1e293b;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
+            animation: popIn 0.5s ease-out;
+            border-left: 4px solid #4ade80;
+        }
+        .wish-bubble::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: -8px;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 0 8px 10px 0;
+            border-color: transparent rgba(255, 255, 255, 0.95) transparent transparent;
+        }
+        @keyframes popIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Loader */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: #0f172a;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            transition: opacity 1s ease-out;
+        }
+        
+        /* Music Control */
+        #music-control {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            animation: pulse-border 2s infinite;
+        }
+        #music-control:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.1);
+        }
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-orange-500 selection:text-white overflow-x-hidden">
+
+    <!-- AUDIO -->
+    <audio id="bg-music" loop>
+        <source src="https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3" type="audio/mpeg">
+    </audio>
+
+    <button id="music-control" onclick="toggleMusic()" title="Putar Musik">
+        <i data-lucide="volume-x" id="music-icon"></i>
+    </button>
+
+    <!-- Overlays -->
+    <div id="massive-fire"></div>
+    <div class="stars" id="star-container"></div>
+    <img src="https://cdn-icons-png.flaticon.com/512/1356/1356479.png" id="flying-rocket" class="hidden fixed bottom-[-100px] right-5 w-16 md:w-20 z-100 transform -rotate-45" alt="Rocket">
+
+    <!-- LOADER -->
+    <div id="loader">
+        <div class="text-6xl mb-4 animate-bounce">🌍</div>
+        <h2 class="text-xl md:text-2xl font-bold text-white fun-font text-center px-4">Memuat Peta Galaksi...</h2>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main class="relative z-10 w-full">
+
+        <!-- SECTION 1: HERO -->
+        <section class="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden" id="section-hero">
+            <img src="https://cdn-icons-png.flaticon.com/512/869/869869.png" class="fg-decor top-10 left-4 md:left-10 w-16 md:w-24 opacity-100 float-slow hover:scale-110 transition-transform drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]" alt="Sun">
+            <img src="https://cdn-icons-png.flaticon.com/512/3214/3214746.png" class="fg-decor top-24 md:top-32 right-4 md:right-10 w-16 md:w-24 opacity-100 float-medium wiggle drop-shadow-[0_0_15px_rgba(74,222,128,0.8)]" alt="UFO">
+            
+            <div id="main-card" class="card-3d bg-slate-900/40 backdrop-blur-md border border-orange-400/30 p-6 md:p-12 rounded-[2rem] shadow-[0_0_80px_rgba(249,115,22,0.4)] w-full max-w-sm md:max-w-lg text-center relative z-20">
+                <div class="card-content">
+                    <div class="inline-block bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm mb-4 md:mb-6 shadow-lg transform -rotate-3 fun-font tracking-wider border-2 border-white/20">
+                        UNDANGAN MISI RAHASIA
+                    </div>
+                    <h1 class="text-5xl md:text-8xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-400 to-red-500 drop-shadow-lg leading-tight">SABARA</h1>
+                    <div class="text-xl md:text-3xl font-bold text-white mb-6 fun-font">
+                        Turn <span class="text-cyan-400 text-4xl md:text-5xl inline-block transform hover:scale-125 transition-transform drop-shadow-md">2</span>
+                    </div>
+                    <p class="text-blue-100 mb-6 md:mb-8 text-base md:text-lg font-medium leading-relaxed">
+                        Siapkan baju angkasamu! Kita akan terbang ke bulan untuk merayakan ulang tahunku.
+                    </p>
+                    <div class="mt-4" id="launch-btn-container">
+                        <button onclick="triggerLaunch()" id="launchBtn" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3 md:py-4 px-8 md:px-10 rounded-full shadow-[0_10px_20px_rgba(6,182,212,0.5)] transition-all transform hover:scale-105 inline-flex items-center gap-2 fun-font text-lg md:text-xl border-b-4 border-blue-900 active:border-b-0 active:translate-y-1 cursor-pointer relative overflow-hidden group animate-bounce">
+                            <span class="relative z-10">MELUNCUR KE BULAN!</span>
+                            <i data-lucide="rocket" class="relative z-10 w-5 h-5 md:w-6 md:h-6"></i>
+                            <div class="absolute inset-0 bg-white/20 transform -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Moon Horizon -->
+            <div class="absolute bottom-0 left-0 w-full overflow-hidden leading-none z-10">
+                <svg class="relative block w-[150%] md:w-[120%] h-[60px] md:h-[100px] left-[-25%] md:left-[-10%]" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                    <path d="M0,120 L1200,120 L1200,60 C900,140 300,140 0,60 Z" fill="#334155"></path>
+                </svg>
+            </div>
+        </section>
+
+        <!-- SECTION 2: MOON INTRO -->
+        <section id="section-photo" class="py-16 md:py-24 relative bg-[#334155] min-h-screen flex flex-col justify-center px-4 overflow-hidden z-20">
+            <div class="crater w-24 h-24 top-10 left-[-20px]"></div>
+            <div class="crater w-20 h-20 bottom-40 left-20"></div>
+            <img src="https://cdn-icons-png.flaticon.com/512/1086/1086600.png" class="fg-decor top-5 right-5 w-20 md:w-28 opacity-100 float-fast drop-shadow-[0_0_10px_rgba(74,222,128,0.8)]" style="transform: rotate(15deg);" alt="Alien">
+            
+            <div class="container mx-auto px-4 text-center relative z-20">
+                <div class="inline-block bg-slate-900/80 px-4 py-1 rounded-full mb-4 border border-yellow-400 shadow-lg">
+                    <span class="text-xs md:text-sm font-bold text-yellow-400 tracking-widest uppercase">📍 Lokasi: Kawah Bulan</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-bold mb-8 text-white fun-font drop-shadow-lg" data-aos="fade-up">Kapten Kita</h2>
+                
+                <div class="inline-block transform hover:scale-105 transition-transform duration-500 mb-8 w-full max-w-[280px] md:max-w-xs">
+                    <div class="hud-frame mx-auto">
+                        <img src="img\4.jpeg" alt="Foto Kapten Sabara" class="hud-image aspect-square object-cover w-full h-full">
+                        <div class="absolute bottom-4 left-4 flex gap-1">
+                            <div class="w-2 h-2 md:w-3 md:h-3 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_red]"></div>
+                            <div class="w-2 h-2 md:w-3 md:h-3 bg-yellow-500 rounded-full animate-pulse delay-75 shadow-[0_0_10px_yellow]"></div>
+                            <div class="w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full animate-pulse delay-150 shadow-[0_0_10px_green]"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/80 backdrop-blur-sm p-6 md:p-8 rounded-[2rem] max-w-2xl mx-auto border-2 border-yellow-400/50 shadow-[0_0_30px_rgba(250,204,21,0.2)] relative overflow-hidden">
+                    <p class="text-lg md:text-xl italic text-yellow-100 leading-relaxed relative z-10">
+                        "Misi berhasil! Aku sudah mendarat di bulan. Pemandangannya keren banget, banyak alien lucu!"
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: GALLERY (MOBILE RESPONSIVE CAROUSEL) -->
+        <section class="py-16 md:py-24 px-4 relative bg-slate-900 overflow-hidden" style="z-index: 50;">
+             <img src="https://cdn-icons-png.flaticon.com/512/944/944063.png" class="fg-decor top-10 left-5 w-12 md:w-20 opacity-80 float-slow spin-slow drop-shadow-[0_0_10px_cyan]" alt="Satellite">
+             
+             <h2 class="text-3xl md:text-5xl font-bold text-center mb-10 md:mb-16 text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-400 fun-font relative z-30 drop-shadow-lg">Galeri Misi</h2>
+
+            <!-- 
+               UPDATE: Gallery Carousel dengan item duplikat untuk efek Loop
+            -->
+            <div id="gallery-carousel" class="flex flex-nowrap overflow-x-auto gap-4 md:grid md:grid-cols-4 md:gap-6 max-w-6xl mx-auto relative z-50 px-4 md:px-0 pb-8 no-scrollbar snap-x snap-mandatory">
+                
+                <!-- SET 1 (Original) -->
+                <div class="snap-center shrink-0 w-[75vw] md:w-auto group relative overflow-hidden rounded-2xl md:rounded-3xl border-[6px] border-cyan-400 aspect-square gallery-item cursor-pointer shadow-[0_0_15px_rgba(34,211,238,0.5)] transform hover:scale-105 transition-all bg-slate-800">
+                    <img src="img\1.jpeg" alt="Momen Seru 1" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                </div>
+                <div class="snap-center shrink-0 w-[75vw] md:w-auto group relative overflow-hidden rounded-2xl md:rounded-3xl border-[6px] border-purple-500 aspect-square gallery-item cursor-pointer md:col-span-2 md:row-span-2 shadow-[0_0_15px_rgba(168,85,247,0.5)] transform hover:scale-105 transition-all bg-slate-800">
+                    <img src="img\5.jpeg" alt="Kapten Sabara Beraksi" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                </div>
+                <div class="snap-center shrink-0 w-[75vw] md:w-auto group relative overflow-hidden rounded-2xl md:rounded-3xl border-[6px] border-pink-500 aspect-square gallery-item cursor-pointer shadow-[0_0_15px_rgba(236,72,153,0.5)] transform hover:scale-105 transition-all bg-slate-800">
+                    <img src="img\3.jpeg" alt="Momen Seru 2" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                </div>
+                <div class="snap-center shrink-0 w-[75vw] md:w-auto group relative overflow-hidden rounded-2xl md:rounded-3xl border-[6px] border-yellow-400 aspect-square gallery-item cursor-pointer shadow-[0_0_15px_rgba(250,204,21,0.5)] transform hover:scale-105 transition-all bg-slate-800">
+                    <img src="img\6.jpeg" alt="Momen Seru 3" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                </div>
+                <div class="snap-center shrink-0 w-[75vw] md:w-auto group relative overflow-hidden rounded-2xl md:rounded-3xl border-[6px] border-green-500 aspect-square gallery-item cursor-pointer shadow-[0_0_15px_rgba(34,197,94,0.5)] transform hover:scale-105 transition-all bg-slate-800">
+                    <img src="img\7.jpeg" alt="Momen Seru 4" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                </div>
+
+                <!-- SET 2 (Duplicate for Loop - Hidden on Desktop by grid) -->
+                <div class="snap-center shrink-0 w-[75vw] md:hidden group relative overflow-hidden rounded-2xl md:rounded-3xl border-[6px] border-cyan-400 aspect-square gallery-item cursor-pointer shadow-[0_0_15px_rgba(34,211,238,0.5)] transform hover:scale-105 transition-all bg-slate-800">
+                    <img src="img\1.jpeg" alt="Momen Seru 1" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                </div>
+                <div class="snap-center shrink-0 w-[75vw] md:hidden group relative overflow-hidden rounded-2xl md:rounded-3xl border-[6px] border-purple-500 aspect-square gallery-item cursor-pointer shadow-[0_0_15px_rgba(168,85,247,0.5)] transform hover:scale-105 transition-all bg-slate-800">
+                    <img src="img\5.jpeg" alt="Kapten Sabara Beraksi" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                </div>
+                <div class="snap-center shrink-0 w-[75vw] md:hidden group relative overflow-hidden rounded-2xl md:rounded-3xl border-[6px] border-pink-500 aspect-square gallery-item cursor-pointer shadow-[0_0_15px_rgba(236,72,153,0.5)] transform hover:scale-105 transition-all bg-slate-800">
+                    <img src="img\3.jpeg" alt="Momen Seru 2" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                </div>
+                <div class="snap-center shrink-0 w-[75vw] md:hidden group relative overflow-hidden rounded-2xl md:rounded-3xl border-[6px] border-yellow-400 aspect-square gallery-item cursor-pointer shadow-[0_0_15px_rgba(250,204,21,0.5)] transform hover:scale-105 transition-all bg-slate-800">
+                    <img src="img\6.jpeg" alt="Momen Seru 3" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                </div>
+                <div class="snap-center shrink-0 w-[75vw] md:hidden group relative overflow-hidden rounded-2xl md:rounded-3xl border-[6px] border-green-500 aspect-square gallery-item cursor-pointer shadow-[0_0_15px_rgba(34,197,94,0.5)] transform hover:scale-105 transition-all bg-slate-800">
+                    <img src="img\7.jpeg" alt="Momen Seru 4" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                </div>
+
+                <!-- Spacer -->
+                <div class="snap-center shrink-0 w-4 md:hidden"></div>
+            </div>
+            
+            <!-- Hint Geser (Mobile Only) -->
+            <div class="text-center md:hidden text-cyan-400 text-sm animate-pulse mt-[-10px] relative z-50">
+                <i data-lucide="arrow-left-right" class="w-4 h-4 inline-block mr-1"></i> Geser untuk melihat
+            </div>
+        </section>
+
+        <!-- SECTION 4: MISSION BASE -->
+        <section id="section-base" class="py-16 md:py-24 px-4 bg-slate-900 relative pb-64 overflow-hidden z-20"> 
+            <h2 class="text-3xl md:text-5xl font-bold text-center mb-8 md:mb-12 text-white fun-font mt-10 relative z-20">Pangkalan Misi</h2>
+            
+            <div class="max-w-4xl mx-auto mb-16 relative z-20">
+                <div class="grid grid-cols-4 gap-2 md:gap-4 text-center">
+                    <div class="bg-slate-800/80 p-3 rounded-xl border border-blue-500/50">
+                        <span id="days" class="text-2xl md:text-4xl font-bold text-blue-400 fun-font">00</span>
+                        <p class="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest">Hari</p>
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded-xl border border-blue-500/50">
+                        <span id="hours" class="text-2xl md:text-4xl font-bold text-blue-400 fun-font">00</span>
+                        <p class="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest">Jam</p>
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded-xl border border-blue-500/50">
+                        <span id="minutes" class="text-2xl md:text-4xl font-bold text-blue-400 fun-font">00</span>
+                        <p class="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest">Menit</p>
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded-xl border border-blue-500/50">
+                        <span id="seconds" class="text-2xl md:text-4xl font-bold text-blue-400 fun-font">00</span>
+                        <p class="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest">Detik</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="max-w-6xl mx-auto flex flex-col md:flex-row gap-6 md:gap-8 items-stretch relative z-20">
+                <div class="flex-1 grid gap-4 md:gap-6">
+                    <div class="bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl border border-blue-500/30 flex items-center gap-4 md:gap-6 hover:bg-slate-800 transition-colors group">
+                        <div class="bg-blue-600/20 w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-blue-600 transition-colors duration-300"><i data-lucide="calendar" class="text-blue-400 w-6 h-6 md:w-8 md:h-8 group-hover:text-white transition-colors"></i></div>
+                        <div>
+                            <p class="text-slate-400 text-xs md:text-sm font-semibold uppercase tracking-wider">Tanggal</p>
+                            <p class="text-lg md:text-xl font-bold text-white mt-1">Minggu, 04 Jan 2026</p>
+                        </div>
+                    </div>
+                    <div class="bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl border border-purple-500/30 flex items-center gap-4 md:gap-6 hover:bg-slate-800 transition-colors group">
+                        <div class="bg-purple-600/20 w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-purple-600 transition-colors duration-300"><i data-lucide="clock" class="text-purple-400 w-6 h-6 md:w-8 md:h-8 group-hover:text-white transition-colors"></i></div>
+                        <div>
+                            <p class="text-slate-400 text-xs md:text-sm font-semibold uppercase tracking-wider">Waktu</p>
+                            <p class="text-lg md:text-xl font-bold text-white mt-1">14:00 WIB - Selesai</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-1 bg-slate-200 rounded-3xl overflow-hidden shadow-2xl border-4 border-slate-700/50 relative min-h-[200px] md:min-h-[250px] group">
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4006.4331983978977!2d110.42445007940853!3d-7.006146350539745!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e708dc413c7bf4b%3A0xb02d2e3d4ca6d872!2sSESERAHAN%20DAN%20MAHAR%20SEMARANG%20%7C%20Hasil%20Tangan%20Semarang!5e1!3m2!1sid!2sid!4v1765703834206!5m2!1sid!2sid" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" class="absolute inset-0 w-full h-full grayscale group-hover:grayscale-0 transition-all duration-700 z-0"></iframe>
+                    <a href="https://maps.app.goo.gl/5AjcFVcyEHJxkBty7" target="_blank" rel="noopener noreferrer" class="absolute bottom-3 right-3 md:bottom-4 md:right-4 bg-white/90 hover:bg-white text-blue-600 font-bold py-2 px-4 rounded-full shadow-lg flex items-center gap-2 transition-all transform hover:scale-105 z-50 text-xs md:text-sm border border-blue-200 backdrop-blur-sm cursor-pointer pointer-events-auto">
+                         <i data-lucide="map-pin" class="w-4 h-4"></i>
+                         Petunjuk Arah
+                    </a>
+                </div>
+            </div>
+            
+            <div class="absolute bottom-0 left-0 w-full z-30 leading-none">
+                <svg class="relative block w-full h-[150px] md:h-[200px]" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+                    <defs>
+                        <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+                    </defs>
+                    <g class="parallax">
+                        <use xlink:href="#gentle-wave" x="48" y="0" fill="rgba(147, 197, 253, 0.7)" /> 
+                        <use xlink:href="#gentle-wave" x="48" y="3" fill="rgba(191, 219, 254, 0.5)" /> 
+                        <use xlink:href="#gentle-wave" x="48" y="5" fill="rgba(219, 234, 254, 0.3)" /> 
+                        <use xlink:href="#gentle-wave" x="48" y="7" fill="#38bdf8" /> 
+                    </g>
+                </svg>
+            </div>
+        </section>
+
+        <!-- SECTION 5: RSVP -->
+        <section id="section-earth" class="pt-16 pb-2 md:pt-24 md:pb-4 px-4 min-h-[90vh] earth-bg flex flex-col justify-end items-center relative z-20">
+            <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+                <svg class="absolute top-[10%] left-[-10%] w-[40%] opacity-40 cloud-drift" viewBox="0 0 100 60"><path d="M10,40 Q25,25 40,40 T70,40 T90,40" fill="white" stroke="white" stroke-width="20" stroke-linecap="round"/></svg>
+                <svg class="absolute top-[20%] right-[-10%] w-[50%] opacity-30 cloud-drift-reverse" style="animation-delay: -10s;" viewBox="0 0 100 60"><path d="M10,40 Q25,25 40,40 T70,40 T90,40" fill="white" stroke="white" stroke-width="20" stroke-linecap="round"/></svg>
+                <svg class="absolute top-[5%] left-[40%] w-[30%] opacity-20 cloud-drift" style="animation-delay: -20s;" viewBox="0 0 100 60"><path d="M10,40 Q25,25 40,40 T70,40 T90,40" fill="white" stroke="white" stroke-width="20" stroke-linecap="round"/></svg>
+            </div>
+
+            <img src="https://cdn-icons-png.flaticon.com/512/3214/3214979.png" class="absolute bottom-[350px] left-4 md:left-10 w-10 md:w-16 float-slow wiggle z-10" alt="Bird">
+            <img src="https://cdn-icons-png.flaticon.com/512/2884/2884666.png" class="absolute top-1/4 left-4 md:left-20 w-12 md:w-16 float-slow spin-slow opacity-90 z-20" alt="Hot Air Balloon">
+
+            <div class="absolute bottom-0 left-0 w-full h-[200px] md:h-[250px] z-10 pointer-events-none">
+                <svg class="absolute bottom-0 left-[-10%] w-[120%] h-full" viewBox="0 0 1200 300" preserveAspectRatio="none">
+                    <path d="M0,300 L1200,300 L1200,150 Q600,50 0,150 Z" fill="#4ade80"></path>
+                    <path d="M0,300 L1200,300 L1200,160 Q600,60 0,160 Z" fill="#22c55e"></path>
+                </svg>
+                <div class="absolute bottom-[100px] md:bottom-[130px] left-[5%] flex items-end">
+                    <img src="https://cdn-icons-png.flaticon.com/512/489/489969.png" class="w-16 md:w-24 drop-shadow-md transform -rotate-6" alt="Tree">
+                    <img src="https://cdn-icons-png.flaticon.com/512/489/489969.png" class="w-10 md:w-16 -ml-4 md:-ml-8 mb-2 drop-shadow-md" alt="Tree">
+                </div>
+                <div class="absolute bottom-[130px] md:bottom-[180px] left-1/2 transform -translate-x-1/2 flex items-end opacity-90">
+                     <img src="https://cdn-icons-png.flaticon.com/512/1147/1147560.png" class="w-8 md:w-12 mx-4 animate-bounce" style="animation-duration: 3s;" alt="Flower">
+                     <img src="https://cdn-icons-png.flaticon.com/512/1147/1147560.png" class="w-10 md:w-14 mx-4 animate-bounce" style="animation-duration: 4s;" alt="Flower">
+                </div>
+                <div class="absolute bottom-[100px] md:bottom-[130px] right-[5%] flex items-end">
+                    <img src="https://cdn-icons-png.flaticon.com/512/489/489969.png" class="w-12 md:w-16 -mr-4 mb-2 drop-shadow-md" alt="Tree">
+                    <img src="https://cdn-icons-png.flaticon.com/512/489/489969.png" class="w-20 md:w-28 drop-shadow-md transform rotate-6" alt="Tree">
+                </div>
+            </div>
+            
+            <div class="absolute -bottom-20 left-0 w-full h-20 bg-[#22c55e] z-0"></div>
+
+            <div class="relative z-30 w-full max-w-sm md:max-w-lg mb-10 md:mb-20">
+                <h2 class="text-3xl md:text-5xl font-bold text-center mb-6 text-slate-800 fun-font rsvp-title drop-shadow-sm px-2">
+                    Kembali ke Bumi? <br><span class="text-green-700">Tulis Ucapanmu!</span>
+                </h2>
+                
+                <div class="bg-white/95 backdrop-blur-sm rounded-[2rem] p-6 md:p-10 shadow-2xl border-b-8 border-green-500 transform hover:-translate-y-1 transition-transform mx-4 md:mx-0">
+                    <form id="wishForm" class="space-y-3 md:space-y-4 text-slate-800" onsubmit="submitWish(event)">
+                        <div>
+                            <input id="guestName" type="text" placeholder="Nama Kamu" required class="w-full bg-blue-50 border-2 border-blue-200 rounded-xl px-4 py-3 focus:outline-none focus:border-green-500 font-bold text-slate-700 placeholder-slate-400 transition-all text-sm md:text-base">
+                        </div>
+                        <div>
+                            <textarea id="guestMessage" rows="2" placeholder="Ucapan untuk Adam..." required class="w-full bg-blue-50 border-2 border-blue-200 rounded-xl px-4 py-3 focus:outline-none focus:border-green-500 font-bold text-slate-700 placeholder-slate-400 transition-all text-sm md:text-base"></textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-black py-3 md:py-4 rounded-xl text-base md:text-lg shadow-lg transform active:scale-95 transition-all fun-font flex items-center justify-center gap-2 mt-2">
+                            <span>Kirim & Ucapkan</span>
+                            <i data-lucide="send" class="w-4 h-4 md:w-5 md:h-5"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- WALL OF WISHES -->
+                <div class="mt-12 w-full px-4">
+                    <h3 class="text-2xl font-bold text-center mb-6 text-slate-800 fun-font">Papan Ucapan</h3>
+                    <!-- 
+                       UPDATE:
+                       1. Data dummy dihapus
+                       2. ID 'wishes-container' akan digunakan untuk Auto-Scroll di JS
+                    -->
+                    <div id="wishes-container" class="max-h-60 overflow-y-auto space-y-4 p-2 custom-scrollbar no-scrollbar relative">
+                        <!-- Konten akan diisi via JS saat user submit -->
+                        <div id="empty-state" class="text-center text-slate-500 italic text-sm py-4">
+                            Belum ada ucapan. Jadilah yang pertama!
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <footer class="text-center text-slate-100 font-bold text-xs md:text-sm flex flex-col items-center gap-2 relative z-30 mb-1 pb-2">
+                <a href="#section-hero" class="p-2 md:p-3 bg-white rounded-full animate-bounce shadow-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                    <i data-lucide="home" class="text-green-600 w-5 h-5 md:w-6 md:h-6"></i>
+                </a>
+                <p class="drop-shadow-md text-slate-800 bg-white/50 px-3 py-1 rounded-full">Powered by Anpol</p>
+            </footer>
+        </section>
+
+    </main>
+
+    <script>
+        // 1. Force Scroll to Top
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+        
+        // 2. Audio Control
+        const audio = document.getElementById('bg-music');
+        const musicBtn = document.getElementById('music-control');
+        const musicIcon = document.getElementById('music-icon');
+        let isMusicPlaying = false;
+
+        function toggleMusic() {
+            if (isMusicPlaying) {
+                audio.pause();
+                musicIcon.setAttribute('data-lucide', 'volume-x');
+            } else {
+                audio.play().catch(e => console.log("User must interact first"));
+                musicIcon.setAttribute('data-lucide', 'music');
+            }
+            isMusicPlaying = !isMusicPlaying;
+            if(typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        // 3. Launch Sequence
+        function triggerLaunch() {
+            const fireOverlay = document.getElementById('massive-fire');
+            const flyingRocket = document.getElementById('flying-rocket');
+            const launchBtn = document.querySelector('#launchBtn');
+
+            if (!isMusicPlaying) {
+                toggleMusic();
+            }
+
+            gsap.set(fireOverlay, { display: 'block', opacity: 0.9, scaleY: 0 });
+            
+            launchBtn.classList.remove('animate-bounce');
+            launchBtn.classList.add('animate-ping');
+            setTimeout(() => { launchBtn.classList.remove('animate-ping'); }, 500);
+
+            const tl = gsap.timeline();
+            tl.to(fireOverlay, { 
+                scaleY: 1.5, 
+                duration: 1.5, 
+                ease: "power2.inOut",
+                onStart: () => {
+                    gsap.to("body", { x: -5, duration: 0.1, yoyo: true, repeat: 10 });
+                }
+            })
+            .to(fireOverlay, { 
+                opacity: 0, 
+                duration: 1, 
+                delay: 0.2,
+                onStart: () => {
+                    flyingRocket.classList.remove('hidden');
+                    if (typeof gsap !== 'undefined') {
+                         gsap.to(window, { duration: 0, scrollTo: "#section-photo" });
+                    } else {
+                        document.getElementById('section-photo').scrollIntoView();
+                    }
+                },
+                onComplete: () => {
+                    fireOverlay.style.display = 'none';
+                }
+            });
+        }
+
+        // 4. Submit Wish & Auto Scroll Logic
+        let scrollInterval;
+        const wishesContainer = document.getElementById('wishes-container');
+
+        // Fungsi Auto Scroll Papan Ucapan
+        function startAutoScroll() {
+            if(scrollInterval) clearInterval(scrollInterval);
+            scrollInterval = setInterval(() => {
+                wishesContainer.scrollTop += 1;
+            }, 50);
+        }
+
+        wishesContainer.addEventListener('mouseenter', () => clearInterval(scrollInterval));
+        wishesContainer.addEventListener('mouseleave', () => startAutoScroll());
+        wishesContainer.addEventListener('touchstart', () => clearInterval(scrollInterval));
+        wishesContainer.addEventListener('touchend', () => startAutoScroll());
+
+        function submitWish(event) {
+            event.preventDefault();
+            const nameInput = document.getElementById('guestName');
+            const messageInput = document.getElementById('guestMessage');
+            
+            const name = nameInput.value;
+            const message = messageInput.value;
+            
+            if(name && message) {
+                addWishToWall(name, message);
+                nameInput.value = '';
+                messageInput.value = '';
+                // UPDATE: Alert konfirmasi dihapus sesuai permintaan
+            }
+        }
+
+        function addWishToWall(name, msg) {
+            const emptyState = document.getElementById('empty-state');
+            if(emptyState) emptyState.remove();
+
+            const container = document.getElementById('wishes-container');
+            const bubble = document.createElement('div');
+            bubble.className = "wish-bubble";
+            bubble.innerHTML = `<p class="font-bold text-green-600 text-sm">${name}</p><p class="text-slate-600 text-sm">${msg}</p>`;
+            
+            container.prepend(bubble);
+            startAutoScroll();
+        }
+
+        // 5. Countdown
+        function startCountdown() {
+            const targetDate = new Date("Jan 01, 2026 14:00:00").getTime();
+
+            setInterval(() => {
+                const now = new Date().getTime();
+                const distance = targetDate - now;
+
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                document.getElementById("days").innerText = days < 10 ? "0" + days : days;
+                document.getElementById("hours").innerText = hours < 10 ? "0" + hours : hours;
+                document.getElementById("minutes").innerText = minutes < 10 ? "0" + minutes : minutes;
+                document.getElementById("seconds").innerText = seconds < 10 ? "0" + seconds : seconds;
+            }, 1000);
+        }
+
+        // 6. Init & Loader Fallback
+        window.addEventListener('load', () => {
+            window.scrollTo(0,0);
+            
+            const loader = document.getElementById('loader');
+            const starContainer = document.getElementById('star-container');
+            
+            // --- SAFETY: Force hide loader after 3s MAX ---
+            setTimeout(() => {
+                if(loader && loader.style.display !== 'none') {
+                    loader.style.opacity = 0;
+                    setTimeout(() => loader.style.display = 'none', 1000);
+                }
+            }, 3000);
+
+            // Stars creation
+            for (let i = 0; i < 150; i++) {
+                const star = document.createElement('div');
+                star.classList.add('star');
+                const duration = Math.random() * 3 + 2;
+                const size = Math.random() * 2 + 1;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.setProperty('--duration', `${duration}s`);
+                starContainer.appendChild(star);
+            }
+
+            // --- UPDATE: Gallery Auto Scroll with Infinite Loop (Mobile Only) ---
+            const gallery = document.getElementById('gallery-carousel');
+            let galleryScrollInterval;
+
+            function startGalleryScroll() {
+                if (galleryScrollInterval) clearInterval(galleryScrollInterval);
+                galleryScrollInterval = setInterval(() => {
+                    // Hanya jalankan jika konten lebih lebar dari container (biasanya di mobile)
+                    // Infinite Loop Logic:
+                    // Karena konten diduplikasi (1-5, 1-5), saat scroll mencapai setengah,
+                    // kita reset ke 0. Setengah adalah akhir dari set pertama.
+                    
+                    // Kita bisa menggunakan properti scrollWidth untuk mendeteksi total panjang.
+                    // Saat scrollLeft >= (totalWidth / 2), berarti kita sudah melihat set kedua.
+                    
+                    if (gallery.scrollWidth > gallery.clientWidth) {
+                        gallery.scrollLeft += 1;
+                        
+                        // Reset jika sudah melewati set pertama (setengah jalan)
+                        // Menggunakan Math.floor untuk keamanan komparasi
+                        if (gallery.scrollLeft >= gallery.scrollWidth / 2) {
+                            gallery.scrollLeft = 0;
+                        }
+                    }
+                }, 20); // Kecepatan scroll sedikit dipercepat agar terasa
+            }
+
+            // Interaksi menghentikan scroll sejenak
+            gallery.addEventListener('touchstart', () => clearInterval(galleryScrollInterval));
+            gallery.addEventListener('touchend', () => setTimeout(startGalleryScroll, 2000));
+            
+            // Jalankan gallery scroll
+            startGalleryScroll();
+
+
+            if (typeof gsap !== 'undefined') {
+                gsap.to(loader, { opacity: 0, duration: 1, onComplete: () => loader.style.display = 'none' });
+                initScrollAnimations();
+            } else {
+                if(loader) loader.style.display = 'none';
+            }
+
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            startCountdown();
+        });
+
+        function initScrollAnimations() {
+            if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+            gsap.registerPlugin(ScrollTrigger);
+
+            gsap.to("#flying-rocket", {
+                scrollTrigger: {
+                    trigger: "body",
+                    start: "top top",
+                    end: "bottom bottom",
+                    scrub: 1.5,
+                },
+                y: -window.innerHeight * 0.9, 
+                x: -30, 
+                rotation: -60, 
+                ease: "power1.inOut"
+            });
+
+            // FIXED: Only animate hud-frame, NOT the gallery items opacity
+            const revealElements = [
+                { target: ".hud-frame", from: { scale: 0.5, opacity: 0 } },
+                // Gallery animation removed for safety
+            ];
+
+            revealElements.forEach(anim => {
+                if (document.querySelector(anim.target)) {
+                    gsap.from(anim.target, {
+                        scrollTrigger: {
+                            trigger: anim.target,
+                            start: "top 85%",
+                            toggleActions: "play none none reverse"
+                        },
+                        duration: 1,
+                        ease: "power3.out",
+                        ...anim.from
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>
