@@ -250,7 +250,7 @@
 <body class="antialiased selection:bg-orange-500 selection:text-white overflow-x-hidden">
 
     <!-- AUDIO -->
-    <audio id="bg-music" loop>
+    <audio id="bg-music" loop autoplay>
         <source src="img\song.mp3" type="audio/mpeg">
     </audio>
 
@@ -346,8 +346,10 @@
 
             <!-- 
                UPDATE: Gallery Carousel dengan item duplikat untuk efek Loop
+               - Menghapus snap-x untuk auto scroll yang lebih mulus
+               - Menambahkan scroll-auto untuk reset instan
             -->
-            <div id="gallery-carousel" class="flex flex-nowrap overflow-x-auto gap-4 md:grid md:grid-cols-4 md:gap-6 max-w-6xl mx-auto relative z-50 px-4 md:px-0 pb-8 no-scrollbar snap-x snap-mandatory">
+            <div id="gallery-carousel" class="flex flex-nowrap overflow-x-auto gap-4 md:grid md:grid-cols-4 md:gap-6 max-w-6xl mx-auto relative z-50 px-4 md:px-0 pb-8 no-scrollbar scroll-auto">
                 
                 <!-- SET 1 (Original) -->
                 <div class="snap-center shrink-0 w-[75vw] md:w-auto group relative overflow-hidden rounded-2xl md:rounded-3xl border-[6px] border-cyan-400 aspect-square gallery-item cursor-pointer shadow-[0_0_15px_rgba(34,211,238,0.5)] transform hover:scale-105 transition-all bg-slate-800">
@@ -382,10 +384,6 @@
                 <div class="snap-center shrink-0 w-[75vw] md:hidden group relative overflow-hidden rounded-2xl md:rounded-3xl border-[6px] border-green-500 aspect-square gallery-item cursor-pointer shadow-[0_0_15px_rgba(34,197,94,0.5)] transform hover:scale-105 transition-all bg-slate-800">
                     <img src="img\7.jpeg" alt="Momen Seru 4" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
                 </div>
-
-                <!-- Spacer -->
-                <div class="snap-center shrink-0 w-4 md:hidden"></div>
-            </div>
             
             <!-- Hint Geser (Mobile Only) -->
             <div class="text-center md:hidden text-cyan-400 text-sm animate-pulse mt-[-10px] relative z-50">
@@ -424,7 +422,7 @@
                         <div class="bg-blue-600/20 w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-blue-600 transition-colors duration-300"><i data-lucide="calendar" class="text-blue-400 w-6 h-6 md:w-8 md:h-8 group-hover:text-white transition-colors"></i></div>
                         <div>
                             <p class="text-slate-400 text-xs md:text-sm font-semibold uppercase tracking-wider">Tanggal</p>
-                            <p class="text-lg md:text-xl font-bold text-white mt-1">Minggu, 25 Des 2025</p>
+                            <p class="text-lg md:text-xl font-bold text-white mt-1">Minggu, 04 Januari 2026</p>
                         </div>
                     </div>
                     <div class="bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl border border-purple-500/30 flex items-center gap-4 md:gap-6 hover:bg-slate-800 transition-colors group">
@@ -525,6 +523,14 @@
                             Belum ada ucapan. Jadilah yang pertama!
                         </div>
                     </div>
+
+                    <!-- TOMBOL RESET DATA (HANYA UNTUK TESTING) -->
+                    <!-- Hapus bagian ini jika sudah siap disebar -->
+                    <div class="text-center mt-4">
+                        <button onclick="resetWishes()" class="text-xs text-red-500 underline hover:text-red-700 opacity-50 hover:opacity-100 transition-opacity">
+                            [Testing] Hapus Semua Data
+                        </button>
+                    </div>
                 </div>
             </div>
             
@@ -540,8 +546,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // Menambahkan getDocs dan deleteDoc untuk fitur hapus
+        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
@@ -571,29 +578,77 @@
             });
         }
 
-        // Auth and Listen
-        signInAnonymously(auth).then(() => {
-            const wishesCol = collection(db, 'artifacts', appId, 'public', 'data', 'wishes');
-            
-            // Listen for updates
-            onSnapshot(wishesCol, (snapshot) => {
-                const wishes = [];
-                snapshot.forEach(doc => {
-                    wishes.push({ id: doc.id, ...doc.data() });
+        // Robust Auth & Listener Setup
+        const initAndListen = async () => {
+            try {
+                // Priority: Custom Token -> Anonymous
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Setup Realtime Listener after Auth
+                const wishesCol = collection(db, 'artifacts', appId, 'public', 'data', 'wishes');
+                
+                onSnapshot(wishesCol, (snapshot) => {
+                    const wishes = [];
+                    snapshot.forEach(doc => {
+                        wishes.push({ id: doc.id, ...doc.data() });
+                    });
+                    
+                    // Sort in memory (Newest first)
+                    wishes.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                    
+                    renderWishes(wishes);
+                }, (error) => {
+                    console.error("Error fetching wishes:", error);
                 });
+
+            } catch (error) {
+                console.error("Authentication failed:", error);
+            }
+        };
+
+        // Initialize
+        initAndListen();
+
+        // FUNGSI RESET DATA (Untuk Testing)
+        window.resetWishes = async () => {
+            if (!confirm("Apakah Anda yakin ingin menghapus SEMUA ucapan? Tindakan ini tidak bisa dibatalkan.")) return;
+            
+            const btn = document.querySelector('button[onclick="resetWishes()"]');
+            if(btn) btn.innerText = "Menghapus...";
+
+            try {
+                const wishesCol = collection(db, 'artifacts', appId, 'public', 'data', 'wishes');
+                const snapshot = await getDocs(wishesCol);
                 
-                // Sort in memory (Newest first)
-                wishes.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                // Hapus satu per satu
+                const deletePromises = snapshot.docs.map(document => 
+                    deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'wishes', document.id))
+                );
                 
-                renderWishes(wishes);
-            }, (error) => {
-                console.error("Error fetching wishes:", error);
-            });
-        });
+                await Promise.all(deletePromises);
+                alert("Data berhasil direset!");
+            } catch (error) {
+                console.error("Gagal menghapus:", error);
+                alert("Gagal menghapus data. Lihat console untuk detail.");
+            } finally {
+                if(btn) btn.innerText = "[Testing] Hapus Semua Data";
+            }
+        };
 
         // Expose submit function globally
         window.submitWish = async (event) => {
             event.preventDefault();
+            
+            // Check auth state
+            if (!auth.currentUser) {
+                alert("Sedang menghubungkan ke database... Silakan tunggu sebentar.");
+                return;
+            }
+
             const nameInput = document.getElementById('guestName');
             const messageInput = document.getElementById('guestMessage');
             const btn = event.target.querySelector('button');
@@ -621,7 +676,7 @@
                 // No alert, just seamless update via listener
             } catch (e) {
                 console.error("Error adding wish: ", e);
-                alert("Gagal mengirim ucapan. Coba lagi ya!");
+                alert("Gagal mengirim ucapan. Pastikan koneksi internet lancar!");
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
@@ -645,11 +700,12 @@
             if (isMusicPlaying) {
                 audio.pause();
                 musicIcon.setAttribute('data-lucide', 'volume-x');
+                isMusicPlaying = false;
             } else {
                 audio.play().catch(e => console.log("User must interact first"));
                 musicIcon.setAttribute('data-lucide', 'music');
+                isMusicPlaying = true;
             }
-            isMusicPlaying = !isMusicPlaying;
             if(typeof lucide !== 'undefined') lucide.createIcons();
         }
 
@@ -718,7 +774,7 @@
 
         // 5. Countdown
         function startCountdown() {
-            const targetDate = new Date("Dec 25, 2025 14:00:00").getTime();
+            const targetDate = new Date("Jan 04, 2026 14:00:00").getTime();
 
             setInterval(() => {
                 const now = new Date().getTime();
@@ -739,6 +795,37 @@
         // 6. Init & Loader Fallback
         window.addEventListener('load', () => {
             window.scrollTo(0,0);
+
+            // --- LOGIKA AUTOPLAY CERDAS ---
+            // Browser modern memblokir autoplay suara. 
+            // Kode ini mencoba play, jika gagal (diblokir), akan play saat user menyentuh layar pertama kali.
+            audio.play().then(() => {
+                // Berhasil autoplay
+                isMusicPlaying = true;
+                musicIcon.setAttribute('data-lucide', 'music');
+                if(typeof lucide !== 'undefined') lucide.createIcons();
+            }).catch(() => {
+                // Gagal autoplay (diblokir browser) -> Tunggu interaksi pertama
+                console.log("Autoplay diblokir browser, menunggu interaksi user.");
+                const playOnInteraction = () => {
+                    if (!isMusicPlaying) {
+                        audio.play().then(() => {
+                            isMusicPlaying = true;
+                            musicIcon.setAttribute('data-lucide', 'music');
+                            if(typeof lucide !== 'undefined') lucide.createIcons();
+                        });
+                    }
+                    // Hapus listener agar tidak dijalankan berkali-kali
+                    document.removeEventListener('click', playOnInteraction);
+                    document.removeEventListener('touchstart', playOnInteraction);
+                    document.removeEventListener('keydown', playOnInteraction);
+                };
+                
+                // Pasang pendengar interaksi
+                document.addEventListener('click', playOnInteraction);
+                document.addEventListener('touchstart', playOnInteraction);
+                document.addEventListener('keydown', playOnInteraction);
+            });
             
             const loader = document.getElementById('loader');
             const starContainer = document.getElementById('star-container');
@@ -773,23 +860,17 @@
                 if (galleryScrollInterval) clearInterval(galleryScrollInterval);
                 galleryScrollInterval = setInterval(() => {
                     // Hanya jalankan jika konten lebih lebar dari container (biasanya di mobile)
-                    // Infinite Loop Logic:
-                    // Karena konten diduplikasi (1-5, 1-5), saat scroll mencapai setengah,
-                    // kita reset ke 0. Setengah adalah akhir dari set pertama.
-                    
-                    // Kita bisa menggunakan properti scrollWidth untuk mendeteksi total panjang.
-                    // Saat scrollLeft >= (totalWidth / 2), berarti kita sudah melihat set kedua.
-                    
                     if (gallery.scrollWidth > gallery.clientWidth) {
                         gallery.scrollLeft += 1;
                         
-                        // Reset jika sudah melewati set pertama (setengah jalan)
-                        // Menggunakan Math.floor untuk keamanan komparasi
-                        if (gallery.scrollLeft >= gallery.scrollWidth / 2) {
+                        // Infinite Loop Logic:
+                        // Jika sudah mencapai setengah (akhir dari set pertama), reset ke 0 secara instan.
+                        // Karena konten diduplikasi persis, pergeseran ini tidak akan terlihat oleh mata.
+                        if (gallery.scrollLeft >= (gallery.scrollWidth / 2)) {
                             gallery.scrollLeft = 0;
                         }
                     }
-                }, 20); // Kecepatan scroll sedikit dipercepat agar terasa
+                }, 20); // Kecepatan scroll
             }
 
             // Interaksi menghentikan scroll sejenak
