@@ -32,7 +32,6 @@
             font-family: 'Fredoka', sans-serif;
         }
 
-        /* Hide Scrollbar for Gallery Mobile but keep functionality */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -344,11 +343,6 @@
              
              <h2 class="text-3xl md:text-5xl font-bold text-center mb-10 md:mb-16 text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-400 fun-font relative z-30 drop-shadow-lg">Galeri Misi</h2>
 
-            <!-- 
-               UPDATE: Gallery Carousel dengan item duplikat untuk efek Loop
-               - Menghapus snap-x untuk auto scroll yang lebih mulus
-               - Menambahkan scroll-auto untuk reset instan
-            -->
             <div id="gallery-carousel" class="flex flex-nowrap overflow-x-auto gap-4 md:grid md:grid-cols-4 md:gap-6 max-w-6xl mx-auto relative z-50 px-4 md:px-0 pb-8 no-scrollbar scroll-auto">
                 
                 <!-- SET 1 (Original) -->
@@ -384,8 +378,8 @@
                 <div class="snap-center shrink-0 w-[75vw] md:hidden group relative overflow-hidden rounded-2xl md:rounded-3xl border-[6px] border-green-500 aspect-square gallery-item cursor-pointer shadow-[0_0_15px_rgba(34,197,94,0.5)] transform hover:scale-105 transition-all bg-slate-800">
                     <img src="img\7.jpeg" alt="Momen Seru 4" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
                 </div>
+            </div>
             
-            <!-- Hint Geser (Mobile Only) -->
             <div class="text-center md:hidden text-cyan-400 text-sm animate-pulse mt-[-10px] relative z-50">
                 <i data-lucide="arrow-left-right" class="w-4 h-4 inline-block mr-1"></i> Geser untuk melihat
             </div>
@@ -495,7 +489,11 @@
                 </h2>
                 
                 <div class="bg-white/95 backdrop-blur-sm rounded-[2rem] p-6 md:p-10 shadow-2xl border-b-8 border-green-500 transform hover:-translate-y-1 transition-transform mx-4 md:mx-0">
-                    <form id="wishForm" class="space-y-3 md:space-y-4 text-slate-800" onsubmit="submitWish(event)">
+                    <!-- 
+                        UPDATE FORM: Hapus 'onsubmit' dari HTML untuk mencegah konflik
+                        Event listener akan dipasang melalui JavaScript
+                    -->
+                    <form id="wishForm" class="space-y-3 md:space-y-4 text-slate-800">
                         <div>
                             <input id="guestName" type="text" placeholder="Nama Kamu" required class="w-full bg-blue-50 border-2 border-blue-200 rounded-xl px-4 py-3 focus:outline-none focus:border-green-500 font-bold text-slate-700 placeholder-slate-400 transition-all text-sm md:text-base">
                         </div>
@@ -512,25 +510,11 @@
                 <!-- WALL OF WISHES -->
                 <div class="mt-12 w-full px-4">
                     <h3 class="text-2xl font-bold text-center mb-6 text-slate-800 fun-font">Papan Ucapan</h3>
-                    <!-- 
-                       UPDATE:
-                       1. Data dummy dihapus
-                       2. ID 'wishes-container' akan digunakan untuk Auto-Scroll di JS
-                    -->
                     <div id="wishes-container" class="max-h-60 overflow-y-auto space-y-4 p-2 custom-scrollbar no-scrollbar relative">
-                        <!-- Konten akan diisi via JS saat user submit -->
                         <div id="empty-state" class="text-center text-slate-500 italic text-sm py-4">
                             Belum ada ucapan. Jadilah yang pertama!
                         </div>
                     </div>
-
-                    <!-- TOMBOL RESET DATA (HANYA UNTUK TESTING) -->
-                    <!-- Hapus bagian ini jika sudah siap disebar -->
-                    <!-- <div class="text-center mt-4">
-                        <button onclick="resetWishes()" class="text-xs text-red-500 underline hover:text-red-700 opacity-50 hover:opacity-100 transition-opacity">
-                            [Testing] Hapus Semua Data
-                        </button>
-                    </div> -->
                 </div>
             </div>
             
@@ -538,29 +522,61 @@
                 <a href="#section-hero" class="p-2 md:p-3 bg-white rounded-full animate-bounce shadow-lg cursor-pointer hover:bg-gray-100 transition-colors">
                     <i data-lucide="home" class="text-green-600 w-5 h-5 md:w-6 md:h-6"></i>
                 </a>
-                <p class="drop-shadow-md text-slate-800 bg-white/50 px-3 py-1 rounded-full">Powered by Cinta Ayah & Bunda</p>
+                <p class="drop-shadow-md text-slate-800 bg-white/50 px-3 py-1 rounded-full">Powered by Anopal</p>
             </footer>
         </section>
 
     </main>
 
+    <!-- FIREBASE & LOGIC SCRIPT -->
     <script type="module">
+        // Import Firebase dari CDN resmi
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // Menambahkan getDocs dan deleteDoc untuk fitur hapus
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = JSON.parse(__firebase_config);
+        // =================================================================================
+        // ⚙️ PENGATURAN ID UNDANGAN (PENTING!)
+        // =================================================================================
+        // Ganti nama ini untuk setiap undangan baru agar ucapan tidak tertukar/tabrakan.
+        // Contoh: 'ultah_adam_2025', 'nikahan_budi_siti', 'aqiqah_bayu'
+        // Gunakan huruf kecil dan garis bawah, jangan pakai spasi.
+        
+        const KODE_UNDANGAN = "ucapan_ultah_sabara_v1"; 
+
+        // =================================================================================
+        
+        // --- BAGIAN INI OTOMATIS BERJALAN DI PREVIEW ENVIRONMENT INI ---
+        let firebaseConfig;
+        let appId = 'default-app-id';
+
+        if (typeof __firebase_config !== 'undefined') {
+            firebaseConfig = JSON.parse(__firebase_config);
+            if (typeof __app_id !== 'undefined') appId = __app_id;
+        } else {
+            // --- CONFIG FIREBASE ANDA (SAAT DIPASANG DI GITHUB/HOSTING SENDIRI) ---
+            // Konfigurasi ini akan aktif ketika website tidak dibuka di preview editor ini.
+            firebaseConfig = {
+                apiKey: "AIzaSyDwGYf7Ouj0MFbOrlvBHwReM9mzYhSHSR8",
+                authDomain: "undangan-dbae1.firebaseapp.com",
+                projectId: "undangan-dbae1",
+                storageBucket: "undangan-dbae1.firebasestorage.app",
+                messagingSenderId: "471040570900",
+                appId: "1:471040570900:web:5182c13f62dc08aa299901"
+            };
+        }
+
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-        // Helper function for rendering
+        // --- FUNGSI TAMPILAN (UI) ---
         function renderWishes(wishes) {
             const container = document.getElementById('wishes-container');
-            container.innerHTML = ''; // Clear current
             
+            container.innerHTML = '';
+
             if (wishes.length === 0) {
                 container.innerHTML = '<div id="empty-state" class="text-center text-slate-500 italic text-sm py-4">Belum ada ucapan. Jadilah yang pertama!</div>';
                 return;
@@ -569,27 +585,37 @@
             wishes.forEach(wish => {
                 const bubble = document.createElement('div');
                 bubble.className = "wish-bubble";
-                // Simple sanitize
-                const name = document.createTextNode(wish.name).textContent;
-                const msg = document.createTextNode(wish.message).textContent;
                 
-                bubble.innerHTML = `<p class="font-bold text-green-600 text-sm">${name}</p><p class="text-slate-600 text-sm">${msg}</p>`;
+                const safeName = document.createTextNode(wish.name).textContent;
+                const safeMsg = document.createTextNode(wish.message).textContent;
+                
+                bubble.innerHTML = `<p class="font-bold text-green-600 text-sm">${safeName}</p><p class="text-slate-600 text-sm">${safeMsg}</p>`;
                 container.appendChild(bubble);
             });
         }
 
-        // Robust Auth & Listener Setup
-        const initAndListen = async () => {
+        // --- AUTH & LISTENER (LOGIKA UTAMA) ---
+        const initSystem = async () => {
             try {
-                // Priority: Custom Token -> Anonymous
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
                     await signInAnonymously(auth);
                 }
 
-                // Setup Realtime Listener after Auth
-                const wishesCol = collection(db, 'artifacts', appId, 'public', 'data', 'wishes');
+                // MENENTUKAN LOKASI PENYIMPANAN BERDASARKAN ID UNDANGAN
+                // Di Preview Environment: path harus spesifik
+                // Di Hosting Sendiri: path bisa langsung nama koleksi
+                let collectionPath;
+                if (typeof __app_id !== 'undefined') {
+                     // Mode Preview
+                     collectionPath = collection(db, 'artifacts', appId, 'public', 'data', KODE_UNDANGAN);
+                } else {
+                     // Mode Hosting Sendiri (GitHub dll) - Lebih Simple
+                     collectionPath = collection(db, KODE_UNDANGAN);
+                }
+                
+                const wishesCol = collectionPath;
                 
                 onSnapshot(wishesCol, (snapshot) => {
                     const wishes = [];
@@ -597,93 +623,108 @@
                         wishes.push({ id: doc.id, ...doc.data() });
                     });
                     
-                    // Sort in memory (Newest first)
-                    wishes.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                    wishes.sort((a, b) => {
+                        const timeA = a.timestamp?.seconds || 0;
+                        const timeB = b.timestamp?.seconds || 0;
+                        return timeB - timeA; 
+                    });
                     
                     renderWishes(wishes);
                 }, (error) => {
-                    console.error("Error fetching wishes:", error);
+                    console.error("Gagal mengambil data:", error);
                 });
 
-            } catch (error) {
-                console.error("Authentication failed:", error);
+                // 3. Pasang Event Listener Form Submit
+                const form = document.getElementById('wishForm');
+                if (form) {
+                    form.addEventListener('submit', async (e) => {
+                        e.preventDefault(); 
+                        
+                        const btn = form.querySelector('button');
+                        const nameInput = document.getElementById('guestName');
+                        const msgInput = document.getElementById('guestMessage');
+                        
+                        const name = nameInput.value.trim();
+                        const msg = msgInput.value.trim();
+
+                        if (!name || !msg) return;
+
+                        const originalBtnText = btn.innerHTML;
+                        btn.innerHTML = '<span>Mengirim...</span>';
+                        btn.disabled = true;
+
+                        try {
+                            await addDoc(wishesCol, {
+                                name: name,
+                                message: msg,
+                                timestamp: serverTimestamp()
+                            });
+
+                            nameInput.value = '';
+                            msgInput.value = '';
+                            
+                            const container = document.getElementById('wishes-container');
+                            if(container) container.scrollTop = 0;
+
+                        } catch (err) {
+                            console.error("Gagal mengirim:", err);
+                            alert("Gagal mengirim ucapan. Cek koneksi internet Anda.");
+                        } finally {
+                            btn.innerHTML = originalBtnText;
+                            btn.disabled = false;
+                        }
+                    });
+                }
+                
+                // Expose Reset function globally using the dynamic collection
+                window.resetWishes = async () => {
+                    if (!confirm("Hapus SEMUA data di undangan '" + KODE_UNDANGAN + "'?")) return;
+                    const btn = document.querySelector('button[onclick="resetWishes()"]');
+                    if(btn) btn.innerText = "Menghapus...";
+                    
+                    try {
+                        const snapshot = await getDocs(wishesCol);
+                        const deletePromises = snapshot.docs.map(d => deleteDoc(doc(wishesCol, d.id)));
+                        await Promise.all(deletePromises);
+                        alert("Data reset berhasil!");
+                    } catch (e) {
+                        alert("Gagal reset: " + e.message);
+                    } finally {
+                        if(btn) btn.innerText = "[Testing] Hapus Data Lokal";
+                    }
+                };
+
+            } catch (err) {
+                console.error("Error Inisialisasi:", err);
             }
         };
 
-        // Initialize
-        initAndListen();
+        initSystem();
 
-        // FUNGSI RESET DATA (Untuk Testing)
-        window.resetWishes = async () => {
-            if (!confirm("Apakah Anda yakin ingin menghapus SEMUA ucapan? Tindakan ini tidak bisa dibatalkan.")) return;
-            
-            const btn = document.querySelector('button[onclick="resetWishes()"]');
-            if(btn) btn.innerText = "Menghapus...";
+        // --- AUTO SCROLL LOGIC ---
+        const scrollContainer = document.getElementById('wishes-container');
+        let scrollInterval;
 
-            try {
-                const wishesCol = collection(db, 'artifacts', appId, 'public', 'data', 'wishes');
-                const snapshot = await getDocs(wishesCol);
-                
-                // Hapus satu per satu
-                const deletePromises = snapshot.docs.map(document => 
-                    deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'wishes', document.id))
-                );
-                
-                await Promise.all(deletePromises);
-                alert("Data berhasil direset!");
-            } catch (error) {
-                console.error("Gagal menghapus:", error);
-                alert("Gagal menghapus data. Lihat console untuk detail.");
-            } finally {
-                if(btn) btn.innerText = "[Testing] Hapus Semua Data";
-            }
-        };
-
-        // Expose submit function globally
-        window.submitWish = async (event) => {
-            event.preventDefault();
-            
-            // Check auth state
-            if (!auth.currentUser) {
-                alert("Sedang menghubungkan ke database... Silakan tunggu sebentar.");
-                return;
-            }
-
-            const nameInput = document.getElementById('guestName');
-            const messageInput = document.getElementById('guestMessage');
-            const btn = event.target.querySelector('button');
-            
-            const name = nameInput.value;
-            const message = messageInput.value;
-            
-            if(!name || !message) return;
-            
-            // UI Feedback
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<span>Mengirim...</span>';
-            btn.disabled = true;
-
-            try {
-                const wishesCol = collection(db, 'artifacts', appId, 'public', 'data', 'wishes');
-                await addDoc(wishesCol, {
-                    name: name,
-                    message: message,
-                    timestamp: serverTimestamp()
-                });
-                
-                nameInput.value = '';
-                messageInput.value = '';
-                // No alert, just seamless update via listener
-            } catch (e) {
-                console.error("Error adding wish: ", e);
-                alert("Gagal mengirim ucapan. Pastikan koneksi internet lancar!");
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
+        function startAutoScroll() {
+            if(scrollInterval) clearInterval(scrollInterval);
+            scrollInterval = setInterval(() => {
+                if(scrollContainer) {
+                    scrollContainer.scrollTop += 1;
+                }
+            }, 50);
         }
+
+        if(scrollContainer) {
+            scrollContainer.addEventListener('mouseenter', () => clearInterval(scrollInterval));
+            scrollContainer.addEventListener('touchstart', () => clearInterval(scrollInterval));
+            scrollContainer.addEventListener('mouseleave', () => startAutoScroll());
+            scrollContainer.addEventListener('touchend', () => setTimeout(startAutoScroll, 2000));
+            startAutoScroll();
+        }
+
     </script>
 
+    <!-- Script Animasi & Lainnya -->
     <script>
         // 1. Force Scroll to Top
         if ('scrollRestoration' in history) {
@@ -752,26 +793,6 @@
             });
         }
 
-        // 4. Auto Scroll Logic Only (Submit handled by module)
-        let scrollInterval;
-        const wishesContainer = document.getElementById('wishes-container');
-
-        function startAutoScroll() {
-            if(scrollInterval) clearInterval(scrollInterval);
-            scrollInterval = setInterval(() => {
-                wishesContainer.scrollTop += 1;
-                // Optional loop if content is static, but dynamic content handles itself mostly
-            }, 50);
-        }
-
-        wishesContainer.addEventListener('mouseenter', () => clearInterval(scrollInterval));
-        wishesContainer.addEventListener('mouseleave', () => startAutoScroll());
-        wishesContainer.addEventListener('touchstart', () => clearInterval(scrollInterval));
-        wishesContainer.addEventListener('touchend', () => startAutoScroll());
-        
-        // Start initially
-        startAutoScroll();
-
         // 5. Countdown
         function startCountdown() {
             const targetDate = new Date("Jan 04, 2026 14:00:00").getTime();
@@ -797,15 +818,11 @@
             window.scrollTo(0,0);
 
             // --- LOGIKA AUTOPLAY CERDAS ---
-            // Browser modern memblokir autoplay suara. 
-            // Kode ini mencoba play, jika gagal (diblokir), akan play saat user menyentuh layar pertama kali.
             audio.play().then(() => {
-                // Berhasil autoplay
                 isMusicPlaying = true;
                 musicIcon.setAttribute('data-lucide', 'music');
                 if(typeof lucide !== 'undefined') lucide.createIcons();
             }).catch(() => {
-                // Gagal autoplay (diblokir browser) -> Tunggu interaksi pertama
                 console.log("Autoplay diblokir browser, menunggu interaksi user.");
                 const playOnInteraction = () => {
                     if (!isMusicPlaying) {
@@ -815,13 +832,10 @@
                             if(typeof lucide !== 'undefined') lucide.createIcons();
                         });
                     }
-                    // Hapus listener agar tidak dijalankan berkali-kali
                     document.removeEventListener('click', playOnInteraction);
                     document.removeEventListener('touchstart', playOnInteraction);
                     document.removeEventListener('keydown', playOnInteraction);
                 };
-                
-                // Pasang pendengar interaksi
                 document.addEventListener('click', playOnInteraction);
                 document.addEventListener('touchstart', playOnInteraction);
                 document.addEventListener('keydown', playOnInteraction);
@@ -830,7 +844,6 @@
             const loader = document.getElementById('loader');
             const starContainer = document.getElementById('star-container');
             
-            // --- SAFETY: Force hide loader after 3s MAX ---
             setTimeout(() => {
                 if(loader && loader.style.display !== 'none') {
                     loader.style.opacity = 0;
@@ -852,34 +865,27 @@
                 starContainer.appendChild(star);
             }
 
-            // --- UPDATE: Gallery Auto Scroll with Infinite Loop (Mobile Only) ---
+            // --- Gallery Auto Scroll (Mobile Only) ---
             const gallery = document.getElementById('gallery-carousel');
             let galleryScrollInterval;
 
             function startGalleryScroll() {
                 if (galleryScrollInterval) clearInterval(galleryScrollInterval);
                 galleryScrollInterval = setInterval(() => {
-                    // Hanya jalankan jika konten lebih lebar dari container (biasanya di mobile)
                     if (gallery.scrollWidth > gallery.clientWidth) {
                         gallery.scrollLeft += 1;
-                        
-                        // Infinite Loop Logic:
-                        // Jika sudah mencapai setengah (akhir dari set pertama), reset ke 0 secara instan.
-                        // Karena konten diduplikasi persis, pergeseran ini tidak akan terlihat oleh mata.
+                        // Loop logic
                         if (gallery.scrollLeft >= (gallery.scrollWidth / 2)) {
                             gallery.scrollLeft = 0;
                         }
                     }
-                }, 20); // Kecepatan scroll
+                }, 20); 
             }
 
-            // Interaksi menghentikan scroll sejenak
             gallery.addEventListener('touchstart', () => clearInterval(galleryScrollInterval));
             gallery.addEventListener('touchend', () => setTimeout(startGalleryScroll, 2000));
             
-            // Jalankan gallery scroll
             startGalleryScroll();
-
 
             if (typeof gsap !== 'undefined') {
                 gsap.to(loader, { opacity: 0, duration: 1, onComplete: () => loader.style.display = 'none' });
@@ -909,10 +915,8 @@
                 ease: "power1.inOut"
             });
 
-            // FIXED: Only animate hud-frame, NOT the gallery items opacity
             const revealElements = [
                 { target: ".hud-frame", from: { scale: 0.5, opacity: 0 } },
-                // Gallery animation removed for safety
             ];
 
             revealElements.forEach(anim => {
@@ -933,5 +937,3 @@
     </script>
 </body>
 </html>
-
-
