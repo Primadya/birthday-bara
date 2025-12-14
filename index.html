@@ -424,7 +424,7 @@
                         <div class="bg-blue-600/20 w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-blue-600 transition-colors duration-300"><i data-lucide="calendar" class="text-blue-400 w-6 h-6 md:w-8 md:h-8 group-hover:text-white transition-colors"></i></div>
                         <div>
                             <p class="text-slate-400 text-xs md:text-sm font-semibold uppercase tracking-wider">Tanggal</p>
-                            <p class="text-lg md:text-xl font-bold text-white mt-1">Minggu, 04 Jan 2026</p>
+                            <p class="text-lg md:text-xl font-bold text-white mt-1">Minggu, 25 Des 2025</p>
                         </div>
                     </div>
                     <div class="bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl border border-purple-500/30 flex items-center gap-4 md:gap-6 hover:bg-slate-800 transition-colors group">
@@ -532,11 +532,102 @@
                 <a href="#section-hero" class="p-2 md:p-3 bg-white rounded-full animate-bounce shadow-lg cursor-pointer hover:bg-gray-100 transition-colors">
                     <i data-lucide="home" class="text-green-600 w-5 h-5 md:w-6 md:h-6"></i>
                 </a>
-                <p class="drop-shadow-md text-slate-800 bg-white/50 px-3 py-1 rounded-full">Powered by Anpol</p>
+                <p class="drop-shadow-md text-slate-800 bg-white/50 px-3 py-1 rounded-full">Powered by Cinta Ayah & Bunda</p>
             </footer>
         </section>
 
     </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // Helper function for rendering
+        function renderWishes(wishes) {
+            const container = document.getElementById('wishes-container');
+            container.innerHTML = ''; // Clear current
+            
+            if (wishes.length === 0) {
+                container.innerHTML = '<div id="empty-state" class="text-center text-slate-500 italic text-sm py-4">Belum ada ucapan. Jadilah yang pertama!</div>';
+                return;
+            }
+
+            wishes.forEach(wish => {
+                const bubble = document.createElement('div');
+                bubble.className = "wish-bubble";
+                // Simple sanitize
+                const name = document.createTextNode(wish.name).textContent;
+                const msg = document.createTextNode(wish.message).textContent;
+                
+                bubble.innerHTML = `<p class="font-bold text-green-600 text-sm">${name}</p><p class="text-slate-600 text-sm">${msg}</p>`;
+                container.appendChild(bubble);
+            });
+        }
+
+        // Auth and Listen
+        signInAnonymously(auth).then(() => {
+            const wishesCol = collection(db, 'artifacts', appId, 'public', 'data', 'wishes');
+            
+            // Listen for updates
+            onSnapshot(wishesCol, (snapshot) => {
+                const wishes = [];
+                snapshot.forEach(doc => {
+                    wishes.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Sort in memory (Newest first)
+                wishes.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                
+                renderWishes(wishes);
+            }, (error) => {
+                console.error("Error fetching wishes:", error);
+            });
+        });
+
+        // Expose submit function globally
+        window.submitWish = async (event) => {
+            event.preventDefault();
+            const nameInput = document.getElementById('guestName');
+            const messageInput = document.getElementById('guestMessage');
+            const btn = event.target.querySelector('button');
+            
+            const name = nameInput.value;
+            const message = messageInput.value;
+            
+            if(!name || !message) return;
+            
+            // UI Feedback
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span>Mengirim...</span>';
+            btn.disabled = true;
+
+            try {
+                const wishesCol = collection(db, 'artifacts', appId, 'public', 'data', 'wishes');
+                await addDoc(wishesCol, {
+                    name: name,
+                    message: message,
+                    timestamp: serverTimestamp()
+                });
+                
+                nameInput.value = '';
+                messageInput.value = '';
+                // No alert, just seamless update via listener
+            } catch (e) {
+                console.error("Error adding wish: ", e);
+                alert("Gagal mengirim ucapan. Coba lagi ya!");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+    </script>
 
     <script>
         // 1. Force Scroll to Top
@@ -605,15 +696,15 @@
             });
         }
 
-        // 4. Submit Wish & Auto Scroll Logic
+        // 4. Auto Scroll Logic Only (Submit handled by module)
         let scrollInterval;
         const wishesContainer = document.getElementById('wishes-container');
 
-        // Fungsi Auto Scroll Papan Ucapan
         function startAutoScroll() {
             if(scrollInterval) clearInterval(scrollInterval);
             scrollInterval = setInterval(() => {
                 wishesContainer.scrollTop += 1;
+                // Optional loop if content is static, but dynamic content handles itself mostly
             }, 50);
         }
 
@@ -621,39 +712,13 @@
         wishesContainer.addEventListener('mouseleave', () => startAutoScroll());
         wishesContainer.addEventListener('touchstart', () => clearInterval(scrollInterval));
         wishesContainer.addEventListener('touchend', () => startAutoScroll());
-
-        function submitWish(event) {
-            event.preventDefault();
-            const nameInput = document.getElementById('guestName');
-            const messageInput = document.getElementById('guestMessage');
-            
-            const name = nameInput.value;
-            const message = messageInput.value;
-            
-            if(name && message) {
-                addWishToWall(name, message);
-                nameInput.value = '';
-                messageInput.value = '';
-                // UPDATE: Alert konfirmasi dihapus sesuai permintaan
-            }
-        }
-
-        function addWishToWall(name, msg) {
-            const emptyState = document.getElementById('empty-state');
-            if(emptyState) emptyState.remove();
-
-            const container = document.getElementById('wishes-container');
-            const bubble = document.createElement('div');
-            bubble.className = "wish-bubble";
-            bubble.innerHTML = `<p class="font-bold text-green-600 text-sm">${name}</p><p class="text-slate-600 text-sm">${msg}</p>`;
-            
-            container.prepend(bubble);
-            startAutoScroll();
-        }
+        
+        // Start initially
+        startAutoScroll();
 
         // 5. Countdown
         function startCountdown() {
-            const targetDate = new Date("Jan 01, 2026 14:00:00").getTime();
+            const targetDate = new Date("Dec 25, 2025 14:00:00").getTime();
 
             setInterval(() => {
                 const now = new Date().getTime();
